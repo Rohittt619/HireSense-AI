@@ -14,34 +14,15 @@ class AIFeedback:
         api_key = os.getenv("GEMINI_API_KEY")
 
         if not api_key:
-            raise ValueError("Gemini API Key not found.")
+            raise Exception("Gemini API Key not found.")
 
         genai.configure(api_key=api_key)
 
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self.model = genai.GenerativeModel(
+            "gemini-2.5-flash"
+        )
 
-    def generate_feedback(self, resume_text, jd_text):
-
-        prompt = f"""
-You are an ATS Resume Expert.
-
-Analyze this resume against the Job Description.
-
-Return:
-
-1. Overall ATS Score (/100)
-2. Missing Skills
-3. Strengths
-4. Weaknesses
-5. Resume Improvements
-6. Interview Preparation Tips
-
-Resume:
-{resume_text}
-
-Job Description:
-{jd_text}
-"""
+    def ask(self, prompt):
 
         try:
 
@@ -49,14 +30,48 @@ Job Description:
 
             return response.text
 
-        except Exception:
+        except Exception as e:
 
-            return """
-## 🤖 AI Feedback Temporarily Unavailable
+            return f"""
+## Gemini API
 
-Gemini API quota has been exceeded.
+{str(e)}
 
-Everything else in HireSense AI is working correctly.
-
-Please wait one minute and try again.
+Everything else in HireSense AI still works.
 """
+
+    def generate_feedback(
+        self,
+        resume,
+        jd
+    ):
+
+        prompt = f"""
+
+You are an ATS Resume Expert.
+
+Analyze this Resume.
+
+Give
+
+Overall Score
+
+Strengths
+
+Weaknesses
+
+Missing Skills
+
+Suggestions
+
+Resume
+
+{resume}
+
+Job Description
+
+{jd}
+
+"""
+
+        return self.ask(prompt)

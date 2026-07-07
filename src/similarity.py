@@ -6,9 +6,7 @@ class SimilarityCalculator:
 
     def calculate(self, resume_text, jd_text):
 
-        vectorizer = TfidfVectorizer(
-            stop_words="english"
-        )
+        vectorizer = TfidfVectorizer(stop_words="english")
 
         vectors = vectorizer.fit_transform(
             [resume_text, jd_text]

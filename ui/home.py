@@ -1,193 +1,361 @@
 import streamlit as st
 import tempfile
 
+from database.db import ResumeDB
+from src.report_generator import ReportGenerator
 from src.parser import ResumeParser
-from src.skills import SkillExtractor
 from src.similarity import SimilarityCalculator
+from src.skills import SkillExtractor
 from src.ats import ATSScorer
 from src.ai_feedback import AIFeedback
+
+from src.resume_rewriter import ResumeRewriter
+from src.interview_generator import InterviewGenerator
+from src.cover_letter import CoverLetterGenerator
+
 from src.visualizer import Visualizer
 
 
 def show_home():
 
+    st.sidebar.title("🚀 HireSense AI")
+
+    page = st.sidebar.radio(
+
+        "Navigation",
+
+        [
+
+            "Dashboard",
+
+            "History"
+
+        ]
+
+    )
+
+    if page == "History":
+
+        st.title("📜 Resume History")
+
+        history = ResumeDB().fetch()
+
+        if history:
+
+            st.dataframe(
+
+                history,
+
+                use_container_width=True
+
+            )
+
+        else:
+
+            st.info("No history available.")
+
+        return
+
     st.title("📄 HireSense AI")
+
     st.subheader("AI Resume Analyzer & ATS Optimizer")
-
-    st.info("""
-### 🚀 AI Powered Resume Intelligence
-
-Upload your Resume and paste a Job Description to get:
-
-- 📄 ATS Score
-- 🎯 Resume Match
-- 💡 Skill Match
-- 🤖 AI Feedback
-- 📊 Interactive Analytics
-""")
 
     st.divider()
 
     uploaded_resume = st.file_uploader(
-        "📄 Upload Resume (PDF)",
+
+        "Upload Resume",
+
         type=["pdf"]
+
     )
 
     job_description = st.text_area(
-        "💼 Paste Job Description",
+
+        "Paste Job Description",
+
         height=220
+
     )
 
-    if st.button("🚀 Analyze Resume", use_container_width=True):
+    if not st.button(
 
-        if uploaded_resume is None:
-            st.error("Please upload a resume.")
-            return
+        "🚀 Analyze Resume",
 
-        if not job_description.strip():
-            st.error("Please paste a Job Description.")
-            return
+        use_container_width=True
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+    ):
 
-            tmp.write(uploaded_resume.read())
+        return
 
-            resume_path = tmp.name
+    if uploaded_resume is None:
 
-        # ----------------------------
-        # Resume Parsing
-        # ----------------------------
+        st.error("Upload Resume.")
 
-        resume_text = ResumeParser().parse(resume_path)
+        return
 
-        # ----------------------------
-        # Similarity
-        # ----------------------------
+    if not job_description.strip():
 
-        similarity = SimilarityCalculator().calculate(
-            resume_text,
-            job_description
+        st.error("Paste Job Description.")
+
+        return
+
+    with tempfile.NamedTemporaryFile(
+
+        delete=False,
+
+        suffix=".pdf"
+
+    ) as tmp:
+
+        tmp.write(
+
+            uploaded_resume.read()
+
         )
 
-        # ----------------------------
-        # ATS Score
-        # ----------------------------
+        resume_path = tmp.name
 
-        ats_score = ATSScorer().score(
-            resume_text
-        )
+    resume_text = ResumeParser().parse(
 
-        # ----------------------------
-        # Skills
-        # ----------------------------
+        resume_path
 
-        skills = SkillExtractor().compare(
-            resume_text,
-            job_description
-        )
+    )
 
-        # ----------------------------
-        # Gemini AI
-        # ----------------------------
+    similarity = SimilarityCalculator().calculate(
 
-        feedback = AIFeedback().generate_feedback(
-            resume_text,
-            job_description
-        )
+        resume_text,
 
-        st.divider()
+        job_description
 
-        col1, col2, col3 = st.columns(3)
+    )
 
-        with col1:
-            st.metric(
-                "📄 ATS Score",
-                f"{ats_score}%"
-            )
-            st.progress(int(ats_score))
+    ats_score = ATSScorer().calculate(
 
-        with col2:
-            st.metric(
-                "🎯 Resume Match",
-                f"{similarity}%"
-            )
-            st.progress(int(similarity))
+        resume_text
 
-        with col3:
-            st.metric(
-                "💡 Skill Match",
-                f"{skills['score']}%"
-            )
-            st.progress(int(skills["score"]))
+    )
 
-        st.divider()
+    skills = SkillExtractor().compare(
 
-        st.subheader("📊 Overall Resume Analysis")
+        resume_text,
 
-        overall = round(
-            (ats_score + similarity + skills["score"]) / 3,
-            2
-        )
+        job_description
 
-        st.metric(
-            "Overall Score",
-            f"{overall}%"
-        )
+    )
+
+    overall = round(
+
+        (
+
+            ats_score +
+
+            similarity +
+
+            skills["score"]
+
+        ) / 3,
+
+        2
+
+    )
+
+    ResumeDB().save(
+
+        uploaded_resume.name,
+
+        ats_score,
+
+        similarity,
+
+        skills["score"],
+
+        overall
+
+    )
+
+    feedback = AIFeedback().generate_feedback(
+
+        resume_text,
+
+        job_description
+
+    )
+    
+    ReportGenerator.generate(
+    "reports/report.pdf",
+    ats_score,
+    similarity,
+    skills,
+    overall,
+    feedback
+)
+
+    with open("reports/report.pdf", "rb") as pdf:
+
+        st.download_button(
+
+        "📥 Download PDF Report",
+
+        pdf,
+
+        file_name="HireSense_Report.pdf",
+
+        mime="application/pdf"
+
+    )
+
+    st.divider()
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+
+        st.metric("📄 ATS", f"{ats_score}%")
+
+        st.progress(int(ats_score))
+
+    with col2:
+
+        st.metric("🎯 Match", f"{similarity}%")
+
+        st.progress(int(similarity))
+
+    with col3:
+
+        st.metric("💡 Skills", f"{skills['score']}%")
+
+        st.progress(int(skills["score"]))
+
+    with col4:
+
+        st.metric("⭐ Overall", f"{overall}%")
 
         st.progress(int(overall))
 
-        st.divider()
+    st.divider()
 
-        st.subheader("📈 Resume Analytics")
+    st.subheader("📊 Skill Analysis")
 
-        pie = Visualizer.pie_chart(skills)
+    chart = Visualizer.chart(skills)
 
-        bar = Visualizer.score_chart(
-            ats_score,
-            similarity,
-            skills["score"]
-        )
+    st.plotly_chart(
+        chart,
+        use_container_width=True
+    )
 
-        c1, c2 = st.columns(2)
+    st.divider()
 
-        with c1:
-            st.plotly_chart(
-                pie,
-                use_container_width=True
-            )
+    left, right = st.columns(2)
 
-        with c2:
-            st.plotly_chart(
-                bar,
-                use_container_width=True
-            )
+    with left:
 
-        st.divider()
+        st.subheader("✅ Matched Skills")
 
-        left, right = st.columns(2)
+        if skills["matched"]:
 
-        with left:
+            for skill in skills["matched"]:
 
-            st.subheader("✅ Matched Skills")
+                st.success(skill)
 
-            if skills["matched"]:
-                for skill in skills["matched"]:
-                    st.success(skill)
-            else:
-                st.info("No matched skills found.")
+        else:
 
-        with right:
+            st.info("No matched skills found.")
 
-            st.subheader("❌ Missing Skills")
+    with right:
 
-            if skills["missing"]:
-                for skill in skills["missing"]:
-                    st.error(skill)
-            else:
-                st.success("No missing skills!")
+        st.subheader("❌ Missing Skills")
 
-        st.divider()
+        if skills["missing"]:
 
-        st.subheader("🤖 AI Resume Feedback")
+            for skill in skills["missing"]:
+
+                st.error(skill)
+
+        else:
+
+            st.success("No missing skills 🎉")
+
+    st.divider()
+
+    with st.expander("🤖 AI Resume Feedback", expanded=True):
 
         st.write(feedback)
+
+    st.divider()
+
+    with st.expander("✨ AI Resume Rewriter"):
+
+        if st.button("Rewrite Resume"):
+
+            rewritten = ResumeRewriter().rewrite(
+
+                resume_text,
+
+                job_description
+
+            )
+
+            st.write(rewritten)
+
+            st.download_button(
+
+                "⬇ Download Rewritten Resume",
+
+                rewritten,
+
+                file_name="rewritten_resume.txt"
+
+            )
+
+    st.divider()
+
+    with st.expander("🎤 Interview Questions"):
+
+        if st.button("Generate Interview Questions"):
+
+            questions = InterviewGenerator().generate(
+
+                resume_text,
+
+                job_description
+
+            )
+
+            st.write(questions)
+
+            st.download_button(
+
+                "⬇ Download Questions",
+
+                questions,
+
+                file_name="interview_questions.txt"
+
+            )
+
+    st.divider()
+
+    with st.expander("📄 Cover Letter"):
+
+        if st.button("Generate Cover Letter"):
+
+            cover = CoverLetterGenerator().generate(
+
+                resume_text,
+
+                job_description
+
+            )
+
+            st.write(cover)
+
+            st.download_button(
+
+                "⬇ Download Cover Letter",
+
+                cover,
+
+                file_name="cover_letter.txt"
+
+            )
