@@ -1,0 +1,75 @@
+{
+  "Programming Languages": [
+    "Python",
+    "Java",
+    "C++",
+    "C",
+    "SQL",
+    "JavaScript",
+    "R",
+    "Go",
+    "Rust",
+    "Bash"
+  ],
+
+  "Data Analysis": [
+    "Pandas",
+    "NumPy",
+    "Matplotlib",
+    "Seaborn",
+    "Excel",
+    "Power BI",
+    "Tableau"
+  ],
+
+  "Machine Learning": [
+    "Scikit-learn",
+    "TensorFlow",
+    "Keras",
+    "PyTorch",
+    "XGBoost",
+    "LightGBM",
+    "Regression",
+    "Classification",
+    "Clustering",
+    "NLP",
+    "Computer Vision"
+  ],
+
+  "Cloud": [
+    "AWS",
+    "Azure",
+    "GCP"
+  ],
+
+  "Databases": [
+    "MySQL",
+    "PostgreSQL",
+    "MongoDB"
+  ],
+
+  "Big Data": [
+    "Spark",
+    "PySpark",
+    "Kafka",
+    "Hadoop"
+  ],
+
+  "DevOps": [
+    "Docker",
+    "Kubernetes",
+    "Jenkins",
+    "Terraform",
+    "Git",
+    "GitHub",
+    "Linux"
+  ],
+
+  "Soft Skills": [
+    "Leadership",
+    "Communication",
+    "Teamwork",
+    "Problem Solving",
+    "Critical Thinking"
+  ]
+}

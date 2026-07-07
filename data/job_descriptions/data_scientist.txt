@@ -1,0 +1,20 @@
+Python
+SQL
+Machine Learning
+Deep Learning
+TensorFlow
+Scikit-learn
+Docker
+AWS
+Azure
+Power BI
+Tableau
+Pandas
+NumPy
+Statistics
+NLP
+Computer Vision
+Git
+Linux
+Communication
+Problem Solving
