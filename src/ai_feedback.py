@@ -37,12 +37,22 @@ class AIFeedback:
 
     def ask(self, prompt):
 
+        st.write("🚀 Sending request to Gemini...")
+
         try:
             response = self.model.generate_content(prompt)
+
+            st.write("✅ Gemini replied")
+
             return response.text
 
         except Exception as e:
+
+            st.error(e)
+
             return f"""
+
+        
 ## Gemini API Error
 
 {str(e)}
