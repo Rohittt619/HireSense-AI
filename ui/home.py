@@ -132,8 +132,10 @@ def show_home():
 
     ats_score = ATSScorer().calculate(
 
-        resume_text
-
+        resume_text,
+        
+        job_description
+        
     )
 
     skills = SkillExtractor().compare(
@@ -174,63 +176,56 @@ def show_home():
 
     )
 
-    feedback = AIFeedback().generate_feedback(
+    # ---------- AI Feedback ----------
+    try:
+        feedback = AIFeedback().generate_feedback(
+            resume_text,
+            job_description
+        )
+    except Exception as e:
+        st.error(f"❌ Gemini Error:\n{e}")
+        feedback = "AI Feedback unavailable."
 
-        resume_text,
+    # ---------- PDF Report ----------
+    try:
+        ReportGenerator.generate(
+            "reports/report.pdf",
+            ats_score,
+            similarity,
+            skills,
+            overall,
+            feedback
+        )
 
-        job_description
+        with open("reports/report.pdf", "rb") as pdf:
+            st.download_button(
+                "📥 Download PDF Report",
+                pdf,
+                file_name="HireSense_Report.pdf",
+                mime="application/pdf"
+            )
 
-    )
-    
-    ReportGenerator.generate(
-    "reports/report.pdf",
-    ats_score,
-    similarity,
-    skills,
-    overall,
-    feedback
-)
-
-    with open("reports/report.pdf", "rb") as pdf:
-
-        st.download_button(
-
-        "📥 Download PDF Report",
-
-        pdf,
-
-        file_name="HireSense_Report.pdf",
-
-        mime="application/pdf"
-
-    )
+    except Exception as e:
+        st.error(f"❌ PDF Generation Error:\n{e}")
 
     st.divider()
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-
         st.metric("📄 ATS", f"{ats_score}%")
-
         st.progress(int(ats_score))
 
     with col2:
-
         st.metric("🎯 Match", f"{similarity}%")
-
         st.progress(int(similarity))
 
     with col3:
-
         st.metric("💡 Skills", f"{skills['score']}%")
-
         st.progress(int(skills["score"]))
 
     with col4:
-
         st.metric("⭐ Overall", f"{overall}%")
-
         st.progress(int(overall))
 
     st.divider()
@@ -249,37 +244,26 @@ def show_home():
     left, right = st.columns(2)
 
     with left:
-
         st.subheader("✅ Matched Skills")
 
         if skills["matched"]:
-
             for skill in skills["matched"]:
-
                 st.success(skill)
-
         else:
-
             st.info("No matched skills found.")
 
     with right:
-
         st.subheader("❌ Missing Skills")
 
         if skills["missing"]:
-
             for skill in skills["missing"]:
-
                 st.error(skill)
-
         else:
-
             st.success("No missing skills 🎉")
 
     st.divider()
 
     with st.expander("🤖 AI Resume Feedback", expanded=True):
-
         st.write(feedback)
 
     st.divider()
@@ -289,23 +273,16 @@ def show_home():
         if st.button("Rewrite Resume"):
 
             rewritten = ResumeRewriter().rewrite(
-
                 resume_text,
-
                 job_description
-
             )
 
             st.write(rewritten)
 
             st.download_button(
-
                 "⬇ Download Rewritten Resume",
-
                 rewritten,
-
                 file_name="rewritten_resume.txt"
-
             )
 
     st.divider()
@@ -315,23 +292,16 @@ def show_home():
         if st.button("Generate Interview Questions"):
 
             questions = InterviewGenerator().generate(
-
                 resume_text,
-
                 job_description
-
             )
 
             st.write(questions)
 
             st.download_button(
-
                 "⬇ Download Questions",
-
                 questions,
-
                 file_name="interview_questions.txt"
-
             )
 
     st.divider()
@@ -341,21 +311,14 @@ def show_home():
         if st.button("Generate Cover Letter"):
 
             cover = CoverLetterGenerator().generate(
-
                 resume_text,
-
                 job_description
-
             )
 
             st.write(cover)
 
             st.download_button(
-
                 "⬇ Download Cover Letter",
-
                 cover,
-
                 file_name="cover_letter.txt"
-
             )
