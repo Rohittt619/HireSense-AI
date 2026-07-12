@@ -135,7 +135,7 @@ HireSense-AI
 │   ├── utils.py
 │   └── visualizer.py
 │
-├── ui/
+├── ui
 
 ```
 
@@ -379,6 +379,3 @@ See the LICENSE file for details.
 ⭐ If you found this project useful, don't forget to star the repository!
 
 Made with ❤️ by Rohit Rathod
-
-
-
