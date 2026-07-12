@@ -135,12 +135,7 @@ HireSense-AI
 │   └── visualizer.py
 │
 ├── ui/
-│
-├── models/
-│
-├── notebooks/
-│
-└── tests/
+
 ```
 
 ---
