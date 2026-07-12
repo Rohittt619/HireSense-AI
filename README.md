@@ -95,17 +95,22 @@ GEMINI_API_KEY=YOUR_API_KEY
 
 ## 📷 Screenshots
 
+
 ### Dashboard
 
-(Add Screenshot)
+![Dashboard](assets/dashboard.png)
 
 ### Skill Analysis
 
-(Add Screenshot)
+![Skills](assets/skills.png)
 
 ### AI Feedback
 
-(Add Screenshot)
+![Feedback](assets/feedback.png)
+
+### Report
+
+![Report](assets/report.png)
 
 ---
 
