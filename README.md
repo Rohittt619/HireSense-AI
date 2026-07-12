@@ -135,7 +135,10 @@ HireSense-AI
 │   ├── utils.py
 │   └── visualizer.py
 │
-├── ui
+├── ui/
+│   ├── home.py
+│   ├── components.py
+│   └── ui/
 
 ```
 
