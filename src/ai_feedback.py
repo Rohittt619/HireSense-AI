@@ -4,7 +4,6 @@ import streamlit as st
 import os
 import google.generativeai as genai
 
-# Load local .env (for VS Code)
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
@@ -13,20 +12,21 @@ class AIFeedback:
 
     def __init__(self):
 
-        # 1. Streamlit Cloud Secret
-        api_key = st.secrets.get("GEMINI_API_KEY", None)
+        api_key = None
 
-        # 2. Local .env fallback
+        # Streamlit Cloud
+        try:
+            api_key = st.secrets.get("GEMINI_API_KEY")
+        except Exception:
+            pass
+
+        # Local .env
         if not api_key:
             api_key = os.getenv("GEMINI_API_KEY")
 
-        # Debug
-        st.write("API key found:", api_key is not None)
-        st.write("API key length:", len(api_key) if api_key else 0)
-
         if not api_key:
             raise Exception(
-                "Gemini API Key not found. Add GEMINI_API_KEY in Streamlit Secrets or .env"
+                "Gemini API Key not found. Add GEMINI_API_KEY to .env or Streamlit Secrets."
             )
 
         genai.configure(api_key=api_key)
@@ -37,28 +37,18 @@ class AIFeedback:
 
     def ask(self, prompt):
 
-        st.write("🚀 Sending request to Gemini...")
-
         try:
+
             response = self.model.generate_content(prompt)
 
-            st.write("✅ Gemini replied")
+            if hasattr(response, "text"):
+                return response.text
 
-            return response.text
+            return "No response returned from Gemini."
 
         except Exception as e:
 
-            st.error(e)
-
-            return f"""
-
-        
-## Gemini API Error
-
-{str(e)}
-
-Everything else in HireSense AI still works.
-"""
+            raise Exception(f"Gemini Error: {str(e)}")
 
     def generate_feedback(self, resume, jd):
 

@@ -1,6 +1,6 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 
 # Virtual Environment
 venv/
@@ -12,7 +12,7 @@ venv/
 .vscode/
 
 # Streamlit
-.streamlit/secrets.toml
+.streamlit/
 
 # Reports
 outputs/
@@ -20,3 +20,14 @@ reports/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite database
+*.db
+database/*.db
