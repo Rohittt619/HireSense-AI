@@ -68,7 +68,7 @@ HireSense-AI/
 ## ⚙ Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/HireSense-AI.git
+git clone https://github.com/Rohittt619/HireSense-AI.git
 
 cd HireSense-AI
 
