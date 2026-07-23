@@ -52,194 +52,234 @@ def show_home():
     uploaded_resume = st.file_uploader("Upload Resume", type=["pdf"])
     job_description = st.text_area("Paste Job Description", height=220)
 
-    if not st.button("🚀 Analyze Resume", use_container_width=True):
-        return
+    # Streamlit State Management: Triggers on Analyze Resume button
+    analyze_clicked = st.button("🚀 Analyze Resume", use_container_width=True)
 
-    if uploaded_resume is None:
-        st.error("Please upload a PDF resume.")
-        return
+    if analyze_clicked:
+        if uploaded_resume is None:
+            st.error("Please upload a PDF resume.")
+            return
 
-    if not job_description.strip():
-        st.error("Please paste a Job Description.")
-        return
+        if not job_description.strip():
+            st.error("Please paste a Job Description.")
+            return
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(uploaded_resume.read())
-        resume_path = tmp.name
+        with st.spinner("Analyzing resume, scoring ATS metrics & querying Gemini AI..."):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_resume.read())
+                resume_path = tmp.name
 
-    resume_text = ResumeParser().parse(resume_path)
+            resume_text = ResumeParser().parse(resume_path)
 
-    # 1. Similarity & ATS Scores
-    similarity = SimilarityCalculator().calculate(resume_text, job_description)
-    ats_score = ATSScorer().calculate(resume_text, job_description)
-    skills = SkillExtractor().compare(resume_text, job_description)
-    impact_data = ImpactAnalyzer.calculate_impact_score(resume_text)
+            similarity = SimilarityCalculator().calculate(resume_text, job_description)
+            ats_score = ATSScorer().calculate(resume_text, job_description)
+            skills = SkillExtractor().compare(resume_text, job_description)
+            impact_data = ImpactAnalyzer.calculate_impact_score(resume_text)
+            overall = round((ats_score + similarity + skills["score"] + impact_data["impact_score"]) / 4, 2)
 
-    overall = round((ats_score + similarity + skills["score"] + impact_data["impact_score"]) / 4, 2)
-
-    # Save to SQLite Database
-    ResumeDB().save(
-        uploaded_resume.name,
-        ats_score,
-        similarity,
-        skills["score"],
-        overall
-    )
-
-    # 2. Structured AI Feedback (Gemini JSON)
-    try:
-        feedback = AIFeedback().generate_feedback(resume_text, job_description)
-    except Exception as e:
-        st.error(f"❌ Gemini Error: {e}")
-        feedback = {
-            "overall_ats_score": ats_score,
-            "matching_skills": skills["matched"],
-            "missing_skills": skills["missing"],
-            "resume_strengths": ["Clear format"],
-            "resume_weaknesses": ["Missing metrics"],
-            "actionable_suggestions": ["Add numbers to bullet points"],
-            "final_verdict": "Manual review required."
-        }
-
-    # 3. PDF Report Generation
-    try:
-        feedback_str = str(feedback) if isinstance(feedback, dict) else feedback
-        ReportGenerator.generate("reports/report.pdf", ats_score, similarity, skills, overall, feedback_str)
-
-        with open("reports/report.pdf", "rb") as pdf:
-            st.download_button(
-                "📥 Download PDF Executive Report",
-                pdf,
-                file_name="HireSense_Report.pdf",
-                mime="application/pdf"
+            ResumeDB().save(
+                uploaded_resume.name,
+                ats_score,
+                similarity,
+                skills["score"],
+                overall
             )
-    except Exception as e:
-        st.error(f"❌ PDF Generation Error: {e}")
 
-    st.divider()
+            try:
+                feedback = AIFeedback().generate_feedback(resume_text, job_description)
+            except Exception as e:
+                st.error(f"❌ Gemini Error: {e}")
+                feedback = {
+                    "overall_ats_score": ats_score,
+                    "matching_skills": skills["matched"],
+                    "missing_skills": skills["missing"],
+                    "resume_strengths": ["Clear format"],
+                    "resume_weaknesses": ["Missing metrics"],
+                    "actionable_suggestions": ["Add numbers to bullet points"],
+                    "final_verdict": "Manual review required."
+                }
 
-    # Metrics Display
-    col1, col2, col3, col4, col5 = st.columns(5)
+            # Store results in st.session_state
+            st.session_state["analyzed"] = True
+            st.session_state["resume_text"] = resume_text
+            st.session_state["job_description"] = job_description
+            st.session_state["ats_score"] = ats_score
+            st.session_state["similarity"] = similarity
+            st.session_state["skills"] = skills
+            st.session_state["impact_data"] = impact_data
+            st.session_state["overall"] = overall
+            st.session_state["feedback"] = feedback
 
-    with col1:
-        st.metric("📄 ATS", f"{ats_score}%")
-        st.progress(int(min(ats_score, 100)))
+    # Render results if analyzed session state is active
+    if st.session_state.get("analyzed"):
+        resume_text = st.session_state["resume_text"]
+        job_description = st.session_state["job_description"]
+        ats_score = st.session_state["ats_score"]
+        similarity = st.session_state["similarity"]
+        skills = st.session_state["skills"]
+        impact_data = st.session_state["impact_data"]
+        overall = st.session_state["overall"]
+        feedback = st.session_state["feedback"]
 
-    with col2:
-        st.metric("🎯 Match", f"{similarity}%")
-        st.progress(int(min(similarity, 100)))
+        # PDF Report Download Button
+        try:
+            feedback_str = str(feedback) if isinstance(feedback, dict) else feedback
+            ReportGenerator.generate("reports/report.pdf", ats_score, similarity, skills, overall, feedback_str)
 
-    with col3:
-        st.metric("💡 Skills", f"{skills['score']}%")
-        st.progress(int(min(skills["score"], 100)))
-
-    with col4:
-        st.metric("⚡ Impact", f"{impact_data['impact_score']}%")
-        st.progress(int(min(impact_data['impact_score'], 100)))
-
-    with col5:
-        st.metric("⭐ Overall", f"{overall}%")
-        st.progress(int(min(overall, 100)))
-
-    st.divider()
-
-    # Skill Visualization
-    st.subheader("📊 Skill Gap Analysis")
-    chart = Visualizer.chart(skills)
-    st.plotly_chart(chart, use_container_width=True)
-
-    st.divider()
-
-    left, right = st.columns(2)
-    with left:
-        st.subheader("✅ Matched Skills")
-        if skills["matched"]:
-            for skill in skills["matched"]:
-                st.success(skill)
-        else:
-            st.info("No matched skills found.")
-
-    with right:
-        st.subheader("❌ Missing Skills")
-        if skills["missing"]:
-            for skill in skills["missing"]:
-                st.error(skill)
-        else:
-            st.success("No missing skills 🎉")
-
-    st.divider()
-
-    # AI Structured Feedback Cards
-    with st.expander("🤖 AI Resume Audit & Verdict", expanded=True):
-        if isinstance(feedback, dict):
-            st.markdown(f"### 📋 Final Verdict: **{feedback.get('final_verdict', 'Reviewed')}**")
-            
-            st.markdown("#### 💪 Resume Strengths")
-            for strength in feedback.get("resume_strengths", []):
-                st.markdown(f"- {strength}")
-                
-            st.markdown("#### ⚠️ Resume Weaknesses")
-            for weakness in feedback.get("resume_weaknesses", []):
-                st.markdown(f"- {weakness}")
-                
-            st.markdown("#### 💡 Actionable Improvement Suggestions")
-            for sug in feedback.get("actionable_suggestions", []):
-                st.markdown(f"- {sug}")
-        else:
-            st.write(feedback)
-
-    st.divider()
-
-    # Rewriter + Word DOCX Export
-    with st.expander("✨ AI Resume Rewriter & Word (.docx) Exporter"):
-        if st.button("Rewrite Resume for JD"):
-            rewritten = ResumeRewriter().rewrite(resume_text, job_description)
-            st.write(rewritten)
-
-            col_a, col_b = st.columns(2)
-            with col_a:
+            with open("reports/report.pdf", "rb") as pdf:
                 st.download_button(
-                    "⬇ Download (.txt)",
-                    rewritten,
-                    file_name="rewritten_resume.txt"
+                    "📥 Download PDF Executive Report",
+                    pdf,
+                    file_name="HireSense_Report.pdf",
+                    mime="application/pdf"
                 )
-            with col_b:
-                docx_bytes = DocxGenerator.generate_docx_bytes("Rewritten Resume", rewritten)
-                st.download_button(
-                    "📄 Download Microsoft Word (.docx)",
-                    docx_bytes,
-                    file_name="rewritten_resume.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+        except Exception as e:
+            st.error(f"❌ PDF Generation Error: {e}")
 
-    st.divider()
+        st.divider()
 
-    # Interview Generator
-    with st.expander("🎤 Tailored Interview Questions"):
-        if st.button("Generate Interview Questions"):
-            questions = InterviewGenerator().generate(resume_text, job_description)
-            st.write(questions)
-            
-            docx_q = DocxGenerator.generate_docx_bytes("Interview Preparation Questions", questions)
-            st.download_button(
-                "📄 Download Word (.docx)",
-                docx_q,
-                file_name="interview_questions.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+        # Score Metrics Display
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("📄 ATS", f"{ats_score}%")
+            st.progress(int(min(ats_score, 100)))
+        with col2:
+            st.metric("🎯 Match", f"{similarity}%")
+            st.progress(int(min(similarity, 100)))
+        with col3:
+            st.metric("💡 Skills", f"{skills['score']}%")
+            st.progress(int(min(skills["score"], 100)))
+        with col4:
+            st.metric("⚡ Impact", f"{impact_data['impact_score']}%")
+            st.progress(int(min(impact_data['impact_score'], 100)))
+        with col5:
+            st.metric("⭐ Overall", f"{overall}%")
+            st.progress(int(min(overall, 100)))
 
-    st.divider()
+        st.divider()
 
-    # Cover Letter Generator
-    with st.expander("📄 Tailored Cover Letter"):
-        if st.button("Generate Cover Letter"):
-            cover = CoverLetterGenerator().generate(resume_text, job_description)
-            st.write(cover)
-            
-            docx_c = DocxGenerator.generate_docx_bytes("Cover Letter", cover)
-            st.download_button(
-                "📄 Download Word (.docx)",
-                docx_c,
-                file_name="cover_letter.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+        # Skill Chart
+        st.subheader("📊 Skill Gap Analysis")
+        chart = Visualizer.chart(skills)
+        st.plotly_chart(chart, use_container_width=True)
+
+        st.divider()
+
+        left, right = st.columns(2)
+        with left:
+            st.subheader("✅ Matched Skills")
+            if skills["matched"]:
+                for skill in skills["matched"]:
+                    st.success(skill)
+            else:
+                st.info("No matched skills found.")
+
+        with right:
+            st.subheader("❌ Missing Skills")
+            if skills["missing"]:
+                for skill in skills["missing"]:
+                    st.error(skill)
+            else:
+                st.success("No missing skills 🎉")
+
+        st.divider()
+
+        # AI Feedback Card
+        with st.expander("🤖 AI Resume Audit & Verdict", expanded=True):
+            if isinstance(feedback, dict):
+                st.markdown(f"### 📋 Final Verdict: **{feedback.get('final_verdict', 'Reviewed')}**")
+                st.markdown("#### 💪 Resume Strengths")
+                for strength in feedback.get("resume_strengths", []):
+                    st.markdown(f"- {strength}")
+                st.markdown("#### ⚠️ Resume Weaknesses")
+                for weakness in feedback.get("resume_weaknesses", []):
+                    st.markdown(f"- {weakness}")
+                st.markdown("#### 💡 Actionable Improvement Suggestions")
+                for sug in feedback.get("actionable_suggestions", []):
+                    st.markdown(f"- {sug}")
+            else:
+                st.write(feedback)
+
+        st.divider()
+
+        # 1. AI Resume Rewriter Expander
+        with st.expander("✨ AI Resume Rewriter & Word (.docx) Exporter", expanded=False):
+            if st.button("Rewrite Resume for JD"):
+                with st.spinner("Rewriting resume bullet points using Gemini AI..."):
+                    st.session_state["rewritten"] = ResumeRewriter().rewrite(resume_text, job_description)
+
+            if st.session_state.get("rewritten"):
+                rewritten_text = st.session_state["rewritten"]
+                st.write(rewritten_text)
+
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.download_button(
+                        "⬇ Download (.txt)",
+                        rewritten_text,
+                        file_name="rewritten_resume.txt"
+                    )
+                with col_b:
+                    docx_bytes = DocxGenerator.generate_docx_bytes("Rewritten Resume", rewritten_text)
+                    st.download_button(
+                        "📄 Download Microsoft Word (.docx)",
+                        docx_bytes,
+                        file_name="rewritten_resume.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+        st.divider()
+
+        # 2. AI Interview Questions Expander
+        with st.expander("🎤 Tailored Interview Questions", expanded=False):
+            if st.button("Generate Interview Questions"):
+                with st.spinner("Generating tailored interview questions..."):
+                    st.session_state["questions"] = InterviewGenerator().generate(resume_text, job_description)
+
+            if st.session_state.get("questions"):
+                q_text = st.session_state["questions"]
+                st.write(q_text)
+
+                col_q1, col_q2 = st.columns(2)
+                with col_q1:
+                    st.download_button(
+                        "⬇ Download (.txt)",
+                        q_text,
+                        file_name="interview_questions.txt"
+                    )
+                with col_q2:
+                    docx_q = DocxGenerator.generate_docx_bytes("Interview Preparation Questions", q_text)
+                    st.download_button(
+                        "📄 Download Word (.docx)",
+                        docx_q,
+                        file_name="interview_questions.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+        st.divider()
+
+        # 3. AI Cover Letter Expander
+        with st.expander("📄 Tailored Cover Letter", expanded=False):
+            if st.button("Generate Cover Letter"):
+                with st.spinner("Drafting tailored cover letter using Gemini AI..."):
+                    st.session_state["cover"] = CoverLetterGenerator().generate(resume_text, job_description)
+
+            if st.session_state.get("cover"):
+                c_text = st.session_state["cover"]
+                st.write(c_text)
+
+                col_c1, col_c2 = st.columns(2)
+                with col_c1:
+                    st.download_button(
+                        "⬇ Download (.txt)",
+                        c_text,
+                        file_name="cover_letter.txt"
+                    )
+                with col_c2:
+                    docx_c = DocxGenerator.generate_docx_bytes("Cover Letter", c_text)
+                    st.download_button(
+                        "📄 Download Word (.docx)",
+                        docx_c,
+                        file_name="cover_letter.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
