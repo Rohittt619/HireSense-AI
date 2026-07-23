@@ -1,11 +1,17 @@
+import os
 import warnings
+import logging
+
 warnings.filterwarnings("ignore")
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("fitz").setLevel(logging.ERROR)
+os.environ["PYMUPDF_WARNINGS"] = "0"
 
 import fitz
 import pdfplumber
 from pathlib import Path
 
-# Suppress PyMuPDF font descriptor warning messages in logs
+# Suppress MuPDF C-level display errors
 try:
     fitz.TOOLS.mupdf_display_errors(False)
 except Exception:

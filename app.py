@@ -1,5 +1,13 @@
+import os
+import sys
 import warnings
+import logging
+
+# Suppress all library log noise
 warnings.filterwarnings("ignore")
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("fitz").setLevel(logging.ERROR)
+os.environ["PYMUPDF_WARNINGS"] = "0"
 
 import sys
 import os
