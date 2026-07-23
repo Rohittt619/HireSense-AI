@@ -1,29 +1,21 @@
-import os
-import sys
 import warnings
-import logging
-
-# Suppress all library log noise
 warnings.filterwarnings("ignore")
-logging.getLogger("pdfminer").setLevel(logging.ERROR)
-logging.getLogger("fitz").setLevel(logging.ERROR)
-os.environ["PYMUPDF_WARNINGS"] = "0"
 
 import sys
 import os
 from pathlib import Path
 
-# Add project root, ui, and src directories to sys.path for Streamlit Cloud execution
+# Add project root directory to sys.path for Streamlit Cloud execution
 ROOT_DIR = Path(__file__).resolve().parent
-UI_DIR = ROOT_DIR / "ui"
-SRC_DIR = ROOT_DIR / "src"
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
-for p in [ROOT_DIR, UI_DIR, SRC_DIR]:
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+# Pre-import core packages to populate sys.modules cleanly
+import database.db
+import src
+import ui.home
 
 import streamlit as st
-from home import show_home
 
 st.set_page_config(
     page_title="HireSense AI",
@@ -32,4 +24,4 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-show_home()
+ui.home.show_home()
