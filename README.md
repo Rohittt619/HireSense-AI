@@ -7,7 +7,7 @@
 [![Google Gemini API](https://img.shields.io/badge/Google--Gemini-1.5--Flash-green.svg)](https://deepmind.google/technologies/gemini/)
 [![OpenSource](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**HireSense AI** is an enterprise-grade, AI-powered Resume Analyzer, ATS (Applicant Tracking System) Optimizer, and Career Assistant. Built with **Streamlit**, **Google Gemini 1.5 Flash API**, **PyMuPDF / pdfplumber**, **python-docx**, and **Plotly**, it evaluates candidate resumes against target job descriptions, identifies skill gaps, analyzes metric density, generates custom interview questions, and exports tailored resumes directly to Microsoft Word (`.docx`).
+**HireSense AI** is an enterprise-grade, AI-powered Resume Analyzer, ATS (Applicant Tracking System) Optimizer, and Career Assistant. Built with **Streamlit**, **Google Gemini 1.5 Flash API**, **PyMuPDF / pdfplumber**, **python-docx**, and **Plotly**, it evaluates candidate resumes against target job descriptions, identifies skill gaps, audits formatting red flags, estimates market compensation, generates custom interview questions, and exports tailored resumes directly to Microsoft Word (`.docx`).
 
 </div>
 
@@ -42,13 +42,13 @@ Upload Job Description
 Dual PDF Parsing (pdfplumber + PyMuPDF)
         │
         ▼
-Skill Extraction & Metric Impact Scoring
+Skill Extraction, Red Flag & Metric Impact Scoring
         │
         ▼
 Dynamic ATS & Keyword Score Calculation
         │
         ▼
-Structured Gemini 1.5 Flash AI Feedback
+Structured Gemini 1.5 Flash AI Feedback & Salary Estimation
         │
         ▼
 PDF Report & Word (.docx) Export Generation
@@ -66,11 +66,19 @@ PDF Report & Word (.docx) Export Generation
 - Dynamic Keyword Match based on uploaded Job Description.
 - Evaluates structural section presence (Education, Experience, Projects, Contact Info).
 
-### ⚡ Quantifiable Impact Metric Scorer
+### 🚩 ATS Red Flag & Formatting Auditor (`src/ats_redflags.py`)
+- Scans text for missing contact details (email, phone, LinkedIn/GitHub links).
+- Checks resume word count limits (250–1000 words) and section header validity.
+
+### 💰 AI Market Salary Estimator & Career Growth (`src/salary_estimator.py`)
+- Uses Gemini AI to estimate market salary ranges in **USD ($)** and **INR (₹)** based on candidate experience and target role.
+- Highlights key high-leverage skills needed to boost compensation and outlines recommended career next steps.
+
+### ⚡ Quantifiable Impact Metric Scorer (`src/impact_analyzer.py`)
 - Scans bullet points for metrics (`%`, `$`, scale), percentages, and strong action verbs (`built`, `engineered`, `optimized`).
 - Calculates a dedicated **Impact Score** to boost real ATS ranking.
 
-### 🤖 Gemini 1.5 Flash AI Feedback
+### 🤖 Gemini 1.5 Flash AI Feedback (`src/ai_feedback.py`)
 - Google Gemini 1.5 Flash outputs structured JSON audits covering:
   - Strengths & Weaknesses
   - Actionable Improvement Suggestions
@@ -79,7 +87,7 @@ PDF Report & Word (.docx) Export Generation
 ### 📊 Interactive Skill Gap Analysis
 - Visualizes Matched Skills vs Missing Skills using interactive Plotly charts.
 
-### ✍ AI Resume Rewriter & Word (.docx) Exporter
+### ✍ AI Resume Rewriter & Word (.docx) Exporter (`src/docx_generator.py`)
 - Rewrites resume bullet points to align with the target Job Description.
 - Exports formatted resumes directly to Microsoft Word (`.docx`) and `.txt`.
 
@@ -107,6 +115,8 @@ HireSense-AI/
 ├── src/
 │   ├── ai_feedback.py             # Google Gemini 1.5 Flash Integration (JSON Schema)
 │   ├── ats.py                     # Dynamic ATS & Structural Scorer
+│   ├── ats_redflags.py            # ATS Formatting & Red Flag Auditor
+│   ├── salary_estimator.py        # AI Market Salary Estimator
 │   ├── impact_analyzer.py         # Quantifiable Metric & Action Verb Scorer
 │   ├── docx_generator.py          # Microsoft Word (.docx) Buffer Exporter
 │   ├── parser.py                  # Dual PDF Extraction (pdfplumber + PyMuPDF)

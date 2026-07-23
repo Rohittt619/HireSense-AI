@@ -25,6 +25,8 @@ from src.cover_letter import CoverLetterGenerator
 from src.visualizer import Visualizer
 from src.impact_analyzer import ImpactAnalyzer
 from src.docx_generator import DocxGenerator
+from src.ats_redflags import ATSRedFlagAuditor
+from src.salary_estimator import SalaryEstimator
 
 
 def show_home():
@@ -75,7 +77,9 @@ def show_home():
             ats_score = ATSScorer().calculate(resume_text, job_description)
             skills = SkillExtractor().compare(resume_text, job_description)
             impact_data = ImpactAnalyzer.calculate_impact_score(resume_text)
-            overall = round((ats_score + similarity + skills["score"] + impact_data["impact_score"]) / 4, 2)
+            redflag_data = ATSRedFlagAuditor.audit(resume_text)
+
+            overall = round((ats_score + similarity + skills["score"] + impact_data["impact_score"] + redflag_data["health_score"]) / 5, 2)
 
             ResumeDB().save(
                 uploaded_resume.name,
@@ -107,6 +111,7 @@ def show_home():
             st.session_state["similarity"] = similarity
             st.session_state["skills"] = skills
             st.session_state["impact_data"] = impact_data
+            st.session_state["redflag_data"] = redflag_data
             st.session_state["overall"] = overall
             st.session_state["feedback"] = feedback
 
@@ -118,6 +123,7 @@ def show_home():
         similarity = st.session_state["similarity"]
         skills = st.session_state["skills"]
         impact_data = st.session_state["impact_data"]
+        redflag_data = st.session_state["redflag_data"]
         overall = st.session_state["overall"]
         feedback = st.session_state["feedback"]
 
@@ -139,7 +145,7 @@ def show_home():
         st.divider()
 
         # Score Metrics Display
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         with col1:
             st.metric("📄 ATS", f"{ats_score}%")
             st.progress(int(min(ats_score, 100)))
@@ -153,6 +159,9 @@ def show_home():
             st.metric("⚡ Impact", f"{impact_data['impact_score']}%")
             st.progress(int(min(impact_data['impact_score'], 100)))
         with col5:
+            st.metric("🛡️ Formatting", f"{redflag_data['health_score']}%")
+            st.progress(int(min(redflag_data['health_score'], 100)))
+        with col6:
             st.metric("⭐ Overall", f"{overall}%")
             st.progress(int(min(overall, 100)))
 
@@ -184,7 +193,25 @@ def show_home():
 
         st.divider()
 
-        # AI Feedback Card
+        # 1. ATS Red Flag & Formatting Audit Card
+        with st.expander("🚩 ATS Red Flag & Formatting Audit", expanded=True):
+            st.markdown(f"### 🛡️ Format Health Score: **{redflag_data['health_score']}/100**")
+            st.caption(f"Total Resume Length: {redflag_data['word_count']} words")
+            
+            if redflag_data["red_flags"]:
+                st.markdown("#### ❌ Critical ATS Red Flags Detected")
+                for flag in redflag_data["red_flags"]:
+                    st.error(f"• {flag}")
+            else:
+                st.success("🎉 Zero ATS formatting red flags detected!")
+                
+            st.markdown("#### ✅ Passed Format Checks")
+            for check in redflag_data["passed_checks"]:
+                st.success(f"• {check}")
+
+        st.divider()
+
+        # 2. AI Feedback Card
         with st.expander("🤖 AI Resume Audit & Verdict", expanded=True):
             if isinstance(feedback, dict):
                 st.markdown(f"### 📋 Final Verdict: **{feedback.get('final_verdict', 'Reviewed')}**")
@@ -202,7 +229,31 @@ def show_home():
 
         st.divider()
 
-        # 1. AI Resume Rewriter Expander
+        # 3. AI Salary Estimator & Career Growth
+        with st.expander("💰 AI Salary Estimator & Career Insights", expanded=False):
+            if st.button("Estimate Market Salary & Growth Trajectory"):
+                with st.spinner("Analyzing compensation benchmarks using Gemini AI..."):
+                    st.session_state["salary_data"] = SalaryEstimator.estimate(resume_text, job_description)
+
+            if st.session_state.get("salary_data"):
+                sal = st.session_state["salary_data"]
+                st.markdown(f"### 💼 Target Role: **{sal.get('job_title', 'Data Specialist')}** ({sal.get('seniority_level', 'Junior-Mid')})")
+                
+                col_s1, col_s2 = st.columns(2)
+                with col_s1:
+                    st.success(f"💵 **US Salary Range**: {sal.get('estimated_salary_range_usd', 'N/A')}")
+                with col_s2:
+                    st.success(f"🇮🇳 **India Salary Range**: {sal.get('estimated_salary_range_inr', 'N/A')}")
+
+                st.markdown("#### 📈 Key Skills to Boost Your Compensation")
+                for sk in sal.get("key_skills_for_salary_boost", []):
+                    st.markdown(f"- **{sk}**")
+
+                st.markdown(f"#### 🚀 Recommended Next Career Step: **{sal.get('career_next_step', 'Next Senior Role')}**")
+
+        st.divider()
+
+        # 4. AI Resume Rewriter Expander
         with st.expander("✨ AI Resume Rewriter & Word (.docx) Exporter", expanded=False):
             if st.button("Rewrite Resume for JD"):
                 with st.spinner("Rewriting resume bullet points using Gemini AI..."):
@@ -230,7 +281,7 @@ def show_home():
 
         st.divider()
 
-        # 2. AI Interview Questions Expander
+        # 5. AI Interview Questions Expander
         with st.expander("🎤 Tailored Interview Questions", expanded=False):
             if st.button("Generate Interview Questions"):
                 with st.spinner("Generating tailored interview questions..."):
@@ -258,7 +309,7 @@ def show_home():
 
         st.divider()
 
-        # 3. AI Cover Letter Expander
+        # 6. AI Cover Letter Expander
         with st.expander("📄 Tailored Cover Letter", expanded=False):
             if st.button("Generate Cover Letter"):
                 with st.spinner("Drafting tailored cover letter using Gemini AI..."):
