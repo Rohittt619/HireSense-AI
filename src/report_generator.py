@@ -14,6 +14,12 @@ class ReportGenerator:
         feedback
     ):
 
+        import os
+        from pathlib import Path
+        
+        output_dir = Path(filename).parent
+        os.makedirs(output_dir, exist_ok=True)
+
         styles = getSampleStyleSheet()
 
         doc = SimpleDocTemplate(filename)

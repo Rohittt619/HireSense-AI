@@ -13,13 +13,13 @@ class SkillExtractor:
 
     def extract(self, text):
 
-        text = text.lower()
-
+        import re
+        text_lower = text.lower()
         found = []
 
         for skill in self.skills:
-
-            if skill.lower() in text:
+            pattern = r"\b" + re.escape(skill.lower()) + r"\b"
+            if re.search(pattern, text_lower):
                 found.append(skill)
 
         return sorted(list(set(found)))
