@@ -12,7 +12,7 @@ class AIFeedback:
 
     def __init__(self):
         api_key = None
-        # Streamlit Cloud
+        # Streamlit Cloud Secrets
         try:
             api_key = st.secrets.get("GEMINI_API_KEY")
         except Exception:
@@ -27,31 +27,35 @@ class AIFeedback:
 
         genai.configure(api_key=api_key)
 
-        # Production Gemini 1.5 Flash Model
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        # Structured JSON Model
-        self.json_model = genai.GenerativeModel(
-            "gemini-1.5-flash",
-            generation_config={"response_mime_type": "application/json"}
-        )
-
     def ask(self, prompt, is_json=False):
-        try:
-            target_model = self.json_model if is_json else self.model
-            response = target_model.generate_content(prompt)
+        # Model fallback chain to handle API version variations smoothly
+        candidate_models = [
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro-latest",
+            "gemini-1.5-flash-001",
+            "gemini-1.5-pro-001",
+            "gemini-pro"
+        ]
 
-            if hasattr(response, "text"):
-                return response.text
+        last_error = None
+        for model_name in candidate_models:
+            try:
+                gen_config = {"response_mime_type": "application/json"} if is_json else {}
+                model = genai.GenerativeModel(model_name, generation_config=gen_config)
+                response = model.generate_content(prompt)
 
-            return "No response returned from Gemini."
-        except Exception as e:
-            raise Exception(f"Gemini Error: {str(e)}")
+                if hasattr(response, "text") and response.text.strip():
+                    return response.text
+            except Exception as e:
+                last_error = e
+                continue
+
+        raise Exception(f"Gemini API Error: {str(last_error)}")
 
     def generate_feedback(self, resume, jd):
         prompt = f"""
 You are an expert ATS Resume Auditor and Technical Recruiter.
-Analyze the following candidate resume against the target job description.
+Analyze the candidate resume against the target job description.
 
 Return a JSON object with the exact keys:
 {{
