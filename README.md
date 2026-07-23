@@ -13,6 +13,23 @@
 
 ---
 
+# 📷 Screenshots
+
+### 🏠 Dashboard Overview
+![Dashboard](assets/dashboard.png)
+
+---
+
+### 📊 Interactive Skill Gap Analysis
+![Skill Analysis](assets/skill_analysis.png)
+
+---
+
+### 🤖 Gemini AI Resume Audit Feedback
+![AI Feedback](assets/ai_feedback.png)
+
+---
+
 # 🧠 How It Works
 
 ```text
