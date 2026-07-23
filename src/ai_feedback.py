@@ -12,38 +12,61 @@ class AIFeedback:
 
     def __init__(self):
         api_key = None
-        # Streamlit Cloud Secrets
+        # Check Streamlit Cloud Secrets (GEMINI_API_KEY or GOOGLE_API_KEY)
         try:
-            api_key = st.secrets.get("GEMINI_API_KEY")
+            api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
         except Exception:
             pass
 
-        # Local .env
+        # Check Local .env / OS environment variables
         if not api_key:
-            api_key = os.getenv("GEMINI_API_KEY")
+            api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
         if not api_key:
-            raise Exception("Gemini API Key not found. Add GEMINI_API_KEY to .env or Streamlit Secrets.")
+            raise Exception("Gemini API Key not found. Add GEMINI_API_KEY to Streamlit Secrets or .env.")
 
         genai.configure(api_key=api_key)
 
     def ask(self, prompt, is_json=False):
-        # Model fallback chain to handle API version variations smoothly
-        candidate_models = [
+        # 1. Dynamic API Model Discovery
+        try:
+            available_models = [
+                m.name for m in genai.list_models() 
+                if "generateContent" in m.supported_generation_methods
+            ]
+            
+            # Prioritize flash models, then pro models, then all others
+            flash_models = [m for m in available_models if "flash" in m]
+            pro_models = [m for m in available_models if "pro" in m]
+            target_list = flash_models + pro_models + available_models
+
+            for m_name in target_list:
+                try:
+                    gen_config = {"response_mime_type": "application/json"} if is_json else {}
+                    m = genai.GenerativeModel(m_name, generation_config=gen_config)
+                    res = m.generate_content(prompt)
+                    if hasattr(res, "text") and res.text.strip():
+                        return res.text
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # 2. Direct Fallback List with 'models/' Prefix
+        direct_models = [
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-pro",
+            "models/gemini-1.0-pro",
             "gemini-1.5-flash-latest",
-            "gemini-1.5-pro-latest",
-            "gemini-1.5-flash-001",
-            "gemini-1.5-pro-001",
-            "gemini-pro"
+            "gemini-1.5-pro-latest"
         ]
 
         last_error = None
-        for model_name in candidate_models:
+        for name in direct_models:
             try:
                 gen_config = {"response_mime_type": "application/json"} if is_json else {}
-                model = genai.GenerativeModel(model_name, generation_config=gen_config)
+                model = genai.GenerativeModel(name, generation_config=gen_config)
                 response = model.generate_content(prompt)
-
                 if hasattr(response, "text") and response.text.strip():
                     return response.text
             except Exception as e:
